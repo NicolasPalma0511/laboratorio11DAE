@@ -23,7 +23,7 @@ services:
 
   blazor:
     build:
-      context: ./BlazorApp
+      context: ./blazor
       dockerfile: Dockerfile
     ports:
       - "5124:80"  # Exponer Blazor en el puerto 5124

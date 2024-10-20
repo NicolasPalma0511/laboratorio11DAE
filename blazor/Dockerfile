@@ -1,25 +1,18 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 # Set the working directory
 WORKDIR /app
 
 # Copy the project files
-COPY ./BlazorApp/*.csproj ./
+COPY ./BlazorApp/*.csproj ./ 
 RUN dotnet restore
 
-# Copy the entire project and build it
+# Copy the entire project
 COPY ./BlazorApp/ ./
-RUN dotnet publish -c Release -o /app/publish
 
-# Serve stage
-FROM nginx:alpine AS serve
-
-# Copy the built Blazor WebAssembly app into the Nginx public folder
-COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
-
-# Expose port 80
+# Expose port 80 (o cualquier otro puerto que prefieras)
 EXPOSE 80
 
-# Start Nginx to serve the app
-CMD ["nginx", "-g", "daemon off;"]
+# Run the Blazor app
+CMD ["dotnet", "run", "--urls", "http://0.0.0.0:80"]
