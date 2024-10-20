@@ -1,0 +1,6 @@
+Flask
+Redis
+gunicorn
+confluent-kafka
+pyodbc
+flask_cors

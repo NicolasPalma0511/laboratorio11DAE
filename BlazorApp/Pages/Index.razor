@@ -1,0 +1,56 @@
+@inject HttpClient Http
+@page "/recommendations"
+
+<h3>Recomendaciones basadas en el último voto</h3>
+
+<!-- Mostrar las recomendaciones basadas en el último voto -->
+@if (recommendations != null && recommendations.Count > 0)
+{
+    <h4>Películas recomendadas:</h4>
+    <ul>
+        @foreach (var movie in recommendations)
+        {
+            <li>@movie.Title (ID: @movie.MovieId)</li>
+        }
+    </ul>
+}
+else
+{
+    <p>No hay recomendaciones disponibles o no se ha registrado un voto aún.</p>
+}
+
+@code {
+    private List<MovieRecommendation> recommendations;  // Recomendaciones basadas en el voto
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar las recomendaciones basadas en el último voto registrado en Flask
+        await LoadRecommendations();
+    }
+
+    // Método para obtener las recomendaciones del API de Flask
+    private async Task LoadRecommendations()
+    {
+        var response = await Http.GetFromJsonAsync<RecommendationResponse>("http://localhost:80/api/recommendations");
+
+        if (response != null && response.Movies != null && response.Movies.Count > 0)
+        {
+            recommendations = response.Movies;
+        }
+        else
+        {
+            recommendations = new List<MovieRecommendation>();
+        }
+    }
+
+    public class MovieRecommendation
+    {
+        public int MovieId { get; set; }
+        public string Title { get; set; }
+    }
+
+    public class RecommendationResponse
+    {
+        public List<MovieRecommendation> Movies { get; set; }
+    }
+}
