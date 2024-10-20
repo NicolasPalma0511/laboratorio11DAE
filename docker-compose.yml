@@ -1,48 +1,37 @@
-version: "3.8"
+version: '3.8'
 
 services:
   flask:
-    build: 
-      context: ./vote
-      target: dev
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck: 
-      test: ["CMD", "curl", "-f", "http://localhost"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    volumes:
-     - ./vote:/usr/local/app
+    build:
+      context: ./flask
+      dockerfile: Dockerfile
     ports:
-      - "5000:80"
-    networks:
-      - front-tier
-      - back-tier
-
-  blazor:
-    build: ./BlazorApp
-    ports:
-      - "5001:80"
-    networks:
-      - front-tier
-      - back-tier
+      - "5000:80"  # Exponer Flask en el puerto 5000
+    environment:
+      - REDIS_HOST=redis  # La IP o nombre del servicio de Redis
     depends_on:
-      flask:
-        condition: service_healthy
+      - redis
+    networks:
+      - app-network
 
   redis:
-    image: redis:alpine
-    volumes:
-      - "./healthchecks:/healthchecks"
-    healthcheck:
-      test: /healthchecks/redis.sh
-      interval: "5s"
+    image: redis:latest
+    ports:
+      - "6379:6379"
     networks:
-      - back-tier
+      - app-network
+
+  blazor:
+    build:
+      context: ./BlazorApp
+      dockerfile: Dockerfile
+    ports:
+      - "5124:80"  # Exponer Blazor en el puerto 5124
+    depends_on:
+      - flask  # Asegurarse de que Flask esté disponible antes de iniciar Blazor
+    networks:
+      - app-network
 
 networks:
-  front-tier
-  back-tier
+  app-network:
+    driver: bridge
