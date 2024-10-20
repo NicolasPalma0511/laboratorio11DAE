@@ -44,5 +44,5 @@ services:
       - back-tier
 
 networks:
-  front-tier:
+  front-tier
   back-tier
