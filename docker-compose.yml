@@ -3,7 +3,7 @@ version: '3.8'
 services:
   flask:
     build:
-      context: ./flask
+      context: ./vote
       dockerfile: Dockerfile
     ports:
       - "5000:80"  # Exponer Flask en el puerto 5000
@@ -28,7 +28,7 @@ services:
     ports:
       - "5124:80"  # Exponer Blazor en el puerto 5124
     depends_on:
-      - flask  # Asegurarse de que Flask esté disponible antes de iniciar Blazor
+      - vote  # Asegurarse de que Flask esté disponible antes de iniciar Blazor
     networks:
       - app-network
 
