@@ -31,7 +31,7 @@ else
     // Método para obtener las recomendaciones del API de Flask
     private async Task LoadRecommendations()
     {
-        var response = await Http.GetFromJsonAsync<RecommendationResponse>("http://localhost:5000/api/recommendations");
+        var response = await Http.GetFromJsonAsync<RecommendationResponse>("http://3.82.219.95:5000/api/recommendations");
 
         if (response != null && response.Movies != null && response.Movies.Count > 0)
         {
