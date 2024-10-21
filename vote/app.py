@@ -10,7 +10,7 @@ import pyodbc  # Para conexión a la base de datos
 hostname = socket.gethostname()
 
 # Configuración de la conexión a SQL Server
-server = 'ec2-44-202-150-106.compute-1.amazonaws.com'
+server = 'ec2-18-204-212-193.compute-1.amazonaws.com'
 database = 'movielens'
 username = 'SA'
 password = 'YourStrong@Passw0rd'
@@ -19,7 +19,7 @@ conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/api/*": {"origins": "http://3.82.219.95:5124"}})
+CORS(app, resources={r"/api/*": {"origins": "http://3.88.178.36:5124"}})
 
 def get_redis():
     if not hasattr(g, 'redis'):
