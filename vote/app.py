@@ -19,7 +19,7 @@ conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/api/*": {"origins": "http://3.88.178.36:5124"}})
+CORS(app, resources={r"/api/*": {"origins": "http://35.175.178.27:5124"}})
 
 def get_redis():
     if not hasattr(g, 'redis'):
