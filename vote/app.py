@@ -137,6 +137,7 @@ def recommend_movies_based_on_vote(voted_movie_id, user_ratings, movie_titles, t
     best_movies = [(movie_id, movie_titles[movie_id]) for movie_id, _ in sorted_movies[:top_n]]
     return best_movies
 
+
 # Nueva función para obtener el último voto desde Redis
 def get_last_voted_movie():
     redis_client = get_redis()
@@ -151,22 +152,18 @@ def hello():
 
     selected_movie = None
     recommendations = []
-    user1_id = 1
-    user2_id = 2
 
     if request.method == 'POST':
-        vote = request.form.get('vote')  # Obtén el movie_id votado
+        vote = request.form['vote']  # Obtén el movie_id votado
         selected_movie = vote
 
         # Almacenar el ID del voto en Redis
         redis_client = get_redis()
         redis_client.set('last_voted_movie', selected_movie)
 
-        # Obtener los IDs de los usuarios del formulario
-        user1_id = request.form.get('user1_id', user1_id, type=int)
-        user2_id = request.form.get('user2_id', user2_id, type=int)
-
         # Obtener calificaciones de dos usuarios para la recomendación personalizada
+        user1_id = 1  # Puedes cambiar este ID
+        user2_id = 2  # Puedes cambiar este ID
         ratings = get_movie_ratings(user1_id, user2_id)
 
         user1_ratings = {}
@@ -188,66 +185,32 @@ def hello():
     # Obtener dos películas aleatorias para mostrar en el voto
     random_movies = get_random_movies()
 
-    # Obtener calificaciones de los usuarios por defecto
-    ratings = get_movie_ratings(user1_id, user2_id)
-    user1_ratings = {}
-    user2_ratings = {}
-    movie_titles = {}
-
-    for row in ratings:
-        user_id, movie_id, rating, title = row
-        if user_id == user1_id:
-            user1_ratings[movie_id] = rating
-        else:
-            user2_ratings[movie_id] = rating
-        movie_titles[movie_id] = title
-
-    # Obtener recomendaciones basadas en los usuarios por defecto
-    user_ratings = {user1_id: user1_ratings, user2_id: user2_ratings}
-    recommendations = recommend_movies_based_on_vote(selected_movie, user_ratings, movie_titles)
-
     resp = make_response(render_template(
         'index.html',
         random_movies=random_movies,
         selected_movie=selected_movie,
         hostname=hostname,
         vote=selected_movie,
-        recommendations=recommendations,  # Pasar las recomendaciones basadas en el voto y la distancia de Manhattan
-        user1_id=user1_id,
-        user2_id=user2_id
+        recommendations=recommendations  # Pasar las recomendaciones basadas en el voto y la distancia de Manhattan
     ))
     resp.set_cookie('voter_id', voter_id)
     return resp
+
 
 # Nueva ruta para obtener las recomendaciones basadas en el último voto
 @app.route("/api/recommendations", methods=['GET'])
 def api_recommendations():
     last_voted_movie = get_last_voted_movie()
-    user1_id = request.args.get('user1_id', default=1, type=int)
-    user2_id = request.args.get('user2_id', default=2, type=int)
 
-    if last_voted_movie:
-        # Obtener calificaciones de los usuarios
-        ratings = get_movie_ratings(user1_id, user2_id)
+    if not last_voted_movie:
+        return jsonify({'error': 'No se ha registrado un voto'}), 400
 
-        user1_ratings = {}
-        user2_ratings = {}
-        movie_titles = {}
+    # Obtener recomendaciones basadas en el último voto
+    recommendations = recommend_movies_based_on_vote(last_voted_movie)
 
-        for row in ratings:
-            user_id, movie_id, rating, title = row
-            if user_id == user1_id:
-                user1_ratings[movie_id] = rating
-            else:
-                user2_ratings[movie_id] = rating
-            movie_titles[movie_id] = title
-
-        # Obtener recomendaciones basadas en el último voto
-        user_ratings = {user1_id: user1_ratings, user2_id: user2_ratings}
-        recommendations = recommend_movies_based_on_vote(last_voted_movie.decode('utf-8'), user_ratings, movie_titles)
-        return jsonify(recommendations)
-
-    return jsonify([])
+    return jsonify({
+        'movies': [{'title': movie[1], 'movie_id': movie[0]} for movie in recommendations]
+    })
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0')
+    app.run(host='0.0.0.0', port=80, debug=True, threaded=True)

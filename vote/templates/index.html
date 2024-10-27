@@ -21,16 +21,7 @@
                         <button id="b" type="submit" name="vote" class="b" value="{{ random_movies[1][0] }}">
                             {{ random_movies[1][1] }}
                         </button>
-
-                        <!-- Input fields for user IDs -->
-                        <label for="user1_id">ID Usuario 1:</label>
-                        <input type="number" name="user1_id" value="{{ user1_id }}" required>
-                        
-                        <label for="user2_id">ID Usuario 2:</label>
-                        <input type="number" name="user2_id" value="{{ user2_id }}" required>
-                        
-                        <input type="submit" value="Actualizar Recomendaciones">
-                    </form>
+                    </form>                    
                     <div id="tip">(Consejo: puedes cambiar tu voto)</div>
                     <div id="hostname">Procesado por el contenedor ID {{ hostname }}</div>
                 </div>
@@ -52,10 +43,14 @@
                 <!-- Recomendaciones de películas para los dos usuarios -->
                 <div id="top-movies">
                     <h4>Mejores películas para los usuarios:</h4>
-                    <ul>
-                        {% for movie_id, title in recommendations %}
-                            <li>{{ title }}</li>
-                        {% endfor %}
+                    <ul id="top-movies-list">
+                        {% if best_movies %}
+                            {% for movie in best_movies %}
+                                <li>{{ movie[1] }} (ID: {{ movie[0] }})</li>
+                            {% endfor %}
+                        {% else %}
+                            <li>No hay películas para mostrar.</li>
+                        {% endif %}
                     </ul>
                 </div>
 
