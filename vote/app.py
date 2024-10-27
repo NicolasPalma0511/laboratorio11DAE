@@ -183,6 +183,10 @@ def hello():
         best_movies = get_best_movies(user1_ratings, user2_ratings, movie_titles)
         recommendations = recommend_movies_based_on_vote(selected_movie, user_ratings, movie_titles)
 
+    # Guardar recomendaciones en Redis
+        redis_client = get_redis()
+        redis_client.set('last_recommendations', json.dumps(recommendations))
+
     # Obtener dos películas aleatorias para mostrar en el voto
     random_movies = get_random_movies()
 
@@ -192,7 +196,7 @@ def hello():
         selected_movie=selected_movie,
         hostname=hostname,
         vote=selected_movie,
-        recommendations=recommendations  # Pasar las recomendaciones basadas en el voto y la distancia de Manhattan
+        recommendations=recommendations,  # Pasar las recomendaciones basadas en el voto y la distancia de Manhattan
         best_movies=best_movies
     ))
     resp.set_cookie('voter_id', voter_id)
@@ -202,14 +206,13 @@ def hello():
 # Nueva ruta para obtener las recomendaciones basadas en el último voto
 @app.route("/api/recommendations", methods=['GET'])
 def api_recommendations():
-    last_voted_movie = get_last_voted_movie()
+    redis_client = get_redis()
+    last_recommendations = redis_client.get('last_recommendations')
 
-    if not last_voted_movie:
-        return jsonify({'error': 'No se ha registrado un voto'}), 400
+    if not last_recommendations:
+        return jsonify({'error': 'No se han encontrado recomendaciones recientes'}), 400
 
-    # Obtener recomendaciones basadas en el último voto
-    recommendations = recommend_movies_based_on_vote(last_voted_movie)
-
+    recommendations = json.loads(last_recommendations)
     return jsonify({
         'movies': [{'title': movie[1], 'movie_id': movie[0]} for movie in recommendations]
     })
