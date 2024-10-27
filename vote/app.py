@@ -144,6 +144,7 @@ def get_last_voted_movie():
     return redis_client.get('last_voted_movie')
 
 # Modificado: almacena el voto en Redis
+@app.route("/", methods=['POST', 'GET'])
 def hello():
     voter_id = request.cookies.get('voter_id')
     if not voter_id:
