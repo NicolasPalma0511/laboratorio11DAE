@@ -4,6 +4,7 @@ from redis import Redis
 import os
 import socket
 import random
+import json
 import pyodbc  # Para conexión a la base de datos
 
 # Configuración de opciones

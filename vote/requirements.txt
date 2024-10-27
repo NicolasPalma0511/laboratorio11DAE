@@ -3,4 +3,5 @@ Redis
 gunicorn
 confluent-kafka
 pyodbc
+json
 flask_cors
