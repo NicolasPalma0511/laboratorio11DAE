@@ -180,6 +180,7 @@ def hello():
 
         # Obtener recomendaciones basadas en el voto utilizando distancia de Manhattan
         user_ratings = {user1_id: user1_ratings, user2_id: user2_ratings}
+        best_movies = get_best_movies(user1_ratings, user2_ratings, movie_titles)
         recommendations = recommend_movies_based_on_vote(selected_movie, user_ratings, movie_titles)
 
     # Obtener dos películas aleatorias para mostrar en el voto
@@ -192,6 +193,7 @@ def hello():
         hostname=hostname,
         vote=selected_movie,
         recommendations=recommendations  # Pasar las recomendaciones basadas en el voto y la distancia de Manhattan
+        best_movies=best_movies
     ))
     resp.set_cookie('voter_id', voter_id)
     return resp
