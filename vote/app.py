@@ -10,7 +10,7 @@ import pyodbc  # Para conexión a la base de datos
 hostname = socket.gethostname()
 
 # Configuración de la conexión a SQL Server
-server = 'ec2-18-204-212-193.compute-1.amazonaws.com'
+server = 'ec2-3-84-227-230.compute-1.amazonaws.com'
 database = 'movielens'
 username = 'SA'
 password = 'YourStrong@Passw0rd'
@@ -85,21 +85,58 @@ def get_random_movies():
     return movies
 
 # Obtener las mejores películas basadas en el voto del usuario
-def recommend_movies_based_on_vote(voted_movie_id, top_n=3):
+def recommend_movies_based_on_vote(voted_movie_id, user_ratings, movie_titles, top_n=3):
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = f"""
-    SELECT TOP {top_n} m.movie_id, m.title
-    FROM movies m
-    JOIN ratings r ON m.movie_id = r.movie_id
-    WHERE r.movie_id != ?  -- Excluir la película votada
-    ORDER BY ABS(r.rating - (SELECT AVG(rating) FROM ratings WHERE movie_id = ?)) ASC
+
+    # Obtener las calificaciones de todos los usuarios para la película votada
+    query = """
+    SELECT r.user_id, r.movie_id, r.rating
+    FROM ratings r
+    WHERE r.movie_id = ?
     """
-    cursor.execute(query, (voted_movie_id, voted_movie_id))
-    recommendations = cursor.fetchall()
+    cursor.execute(query, voted_movie_id)
+    voted_movie_ratings = cursor.fetchall()
+    
+    user_ratings_for_voted_movie = {user_id: rating for user_id, _, rating in voted_movie_ratings}
+    
+    # Obtener las calificaciones de todos los usuarios para otras películas
+    query = """
+    SELECT r.user_id, r.movie_id, r.rating, m.title
+    FROM ratings r
+    JOIN movies m ON r.movie_id = m.movie_id
+    WHERE r.movie_id != ?
+    """
+    cursor.execute(query, voted_movie_id)
+    other_movie_ratings = cursor.fetchall()
+    
     cursor.close()
     conn.close()
-    return recommendations
+
+    # Crear un diccionario de calificaciones por usuario
+    user_movie_ratings = {}
+    for user_id, movie_id, rating, title in other_movie_ratings:
+        if user_id not in user_movie_ratings:
+            user_movie_ratings[user_id] = {}
+        user_movie_ratings[user_id][movie_id] = rating
+        if movie_id not in movie_titles:
+            movie_titles[movie_id] = title
+
+    # Calcular la distancia Manhattan entre las calificaciones de la película votada y otras películas
+    movie_distances = {}
+    for user_id, ratings in user_movie_ratings.items():
+        if user_id in user_ratings_for_voted_movie:
+            distance = manhattan_distance({voted_movie_id: user_ratings_for_voted_movie[user_id]}, ratings)
+            for movie_id in ratings:
+                if movie_id not in movie_distances:
+                    movie_distances[movie_id] = 0
+                movie_distances[movie_id] += distance
+
+    # Ordenar las películas por distancia y seleccionar las mejores
+    sorted_movies = sorted(movie_distances.items(), key=lambda x: x[1])
+    best_movies = [(movie_id, movie_titles[movie_id]) for movie_id, _ in sorted_movies[:top_n]]
+    return best_movies
+
 
 # Nueva función para obtener el último voto desde Redis
 def get_last_voted_movie():
@@ -124,31 +161,29 @@ def hello():
         redis_client = get_redis()
         redis_client.set('last_voted_movie', selected_movie)
 
-        # Obtener recomendaciones basadas en el voto
-        recommendations = recommend_movies_based_on_vote(selected_movie)
+        # Obtener calificaciones de dos usuarios para la recomendación personalizada
+        user1_id = 1  # Puedes cambiar este ID
+        user2_id = 2  # Puedes cambiar este ID
+        ratings = get_movie_ratings(user1_id, user2_id)
+
+        user1_ratings = {}
+        user2_ratings = {}
+        movie_titles = {}
+
+        for row in ratings:
+            user_id, movie_id, rating, title = row
+            if user_id == user1_id:
+                user1_ratings[movie_id] = rating
+            else:
+                user2_ratings[movie_id] = rating
+            movie_titles[movie_id] = title
+
+        # Obtener recomendaciones basadas en el voto utilizando distancia de Manhattan
+        user_ratings = {user1_id: user1_ratings, user2_id: user2_ratings}
+        recommendations = recommend_movies_based_on_vote(selected_movie, user_ratings, movie_titles)
 
     # Obtener dos películas aleatorias para mostrar en el voto
     random_movies = get_random_movies()
-
-    # Obtener calificaciones de dos usuarios para la recomendación personalizada
-    user1_id = 1  # Puedes cambiar este ID
-    user2_id = 2  # Puedes cambiar este ID
-    ratings = get_movie_ratings(user1_id, user2_id)
-    
-    user1_ratings = {}
-    user2_ratings = {}
-    movie_titles = {}
-
-    for row in ratings:
-        user_id, movie_id, rating, title = row
-        if user_id == user1_id:
-            user1_ratings[movie_id] = rating
-        else:
-            user2_ratings[movie_id] = rating
-        movie_titles[movie_id] = title
-
-    distance = manhattan_distance(user1_ratings, user2_ratings)
-    best_movies = get_best_movies(user1_ratings, user2_ratings, movie_titles)
 
     resp = make_response(render_template(
         'index.html',
@@ -156,11 +191,11 @@ def hello():
         selected_movie=selected_movie,
         hostname=hostname,
         vote=selected_movie,
-        best_movies=best_movies,  # Pasar las mejores películas a la plantilla
-        recommendations=recommendations  # Asegúrate de pasar las recomendaciones
+        recommendations=recommendations  # Pasar las recomendaciones basadas en el voto y la distancia de Manhattan
     ))
     resp.set_cookie('voter_id', voter_id)
     return resp
+
 
 # Nueva ruta para obtener las recomendaciones basadas en el último voto
 @app.route("/api/recommendations", methods=['GET'])
