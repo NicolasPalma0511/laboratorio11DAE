@@ -144,7 +144,6 @@ def get_last_voted_movie():
     return redis_client.get('last_voted_movie')
 
 # Modificado: almacena el voto en Redis
-@app.route("/", methods=['POST', 'GET'])
 def hello():
     voter_id = request.cookies.get('voter_id')
     if not voter_id:
@@ -152,18 +151,20 @@ def hello():
 
     selected_movie = None
     recommendations = []
+    best_movies = []
 
     if request.method == 'POST':
-        vote = request.form['vote']  # Obtén el movie_id votado
+        vote = request.form['vote']  # Get the voted movie ID
+        user1_id = int(request.form['user1_id'])
+        user2_id = int(request.form['user2_id'])
+
         selected_movie = vote
 
-        # Almacenar el ID del voto en Redis
+        # Store the vote in Redis
         redis_client = get_redis()
         redis_client.set('last_voted_movie', selected_movie)
 
-        # Obtener calificaciones de dos usuarios para la recomendación personalizada
-        user1_id = 1  # Puedes cambiar este ID
-        user2_id = 2  # Puedes cambiar este ID
+        # Get ratings of two users for personalized recommendation
         ratings = get_movie_ratings(user1_id, user2_id)
 
         user1_ratings = {}
@@ -178,11 +179,14 @@ def hello():
                 user2_ratings[movie_id] = rating
             movie_titles[movie_id] = title
 
-        # Obtener recomendaciones basadas en el voto utilizando distancia de Manhattan
+        # Get recommendations based on the vote using Manhattan distance
         user_ratings = {user1_id: user1_ratings, user2_id: user2_ratings}
         recommendations = recommend_movies_based_on_vote(selected_movie, user_ratings, movie_titles)
 
-    # Obtener dos películas aleatorias para mostrar en el voto
+        # Get best movies based on similarity
+        best_movies = get_best_movies(user1_ratings, user2_ratings, movie_titles)
+
+    # Get two random movies to display for voting
     random_movies = get_random_movies()
 
     resp = make_response(render_template(
@@ -191,7 +195,8 @@ def hello():
         selected_movie=selected_movie,
         hostname=hostname,
         vote=selected_movie,
-        recommendations=recommendations  # Pasar las recomendaciones basadas en el voto y la distancia de Manhattan
+        recommendations=recommendations,  # Pass recommendations based on the vote and Manhattan distance
+        best_movies=best_movies  # Pass the best movies based on user similarities
     ))
     resp.set_cookie('voter_id', voter_id)
     return resp
